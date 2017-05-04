@@ -9,7 +9,11 @@ import (
 	"github.com/go-check/check"
 	"github.com/hashicorp/consul/api"
 
+	"bytes"
+	"errors"
+	"github.com/containous/traefik/integration/utils"
 	checker "github.com/vdemeester/shakers"
+	"strings"
 )
 
 // Consul catalog test suites
@@ -58,6 +62,31 @@ func (s *ConsulCatalogSuite) registerService(name string, address string, port i
 	return err
 }
 
+func (s *ConsulCatalogSuite) registerServiceAndCheck(name string, address string, port int, tags []string) error {
+	catalog := s.consulClient.Catalog()
+	_, err := catalog.Register(
+		&api.CatalogRegistration{
+			Node:    address,
+			Address: address,
+			Service: &api.AgentService{
+				ID:      name,
+				Service: name,
+				Address: address,
+				Port:    port,
+				Tags:    tags,
+			},
+			Check: &api.AgentCheck{
+				Node:      address,
+				CheckID:   name,
+				ServiceID: name,
+				Name:      name,
+			},
+		},
+		&api.WriteOptions{},
+	)
+	return err
+}
+
 func (s *ConsulCatalogSuite) deregisterService(name string, address string) error {
 	catalog := s.consulClient.Catalog()
 	_, err := catalog.Deregister(
@@ -98,8 +127,95 @@ func (s *ConsulCatalogSuite) TestSingleService(c *check.C) {
 	c.Assert(err, checker.IsNil, check.Commentf("Error registering service"))
 	defer s.deregisterService("test", nginx.NetworkSettings.IPAddress)
 
-	time.Sleep(5000 * time.Millisecond)
+	// wait for traefik
+	err = utils.TryRequest("http://127.0.0.1:8081/api/providers", 60*time.Second, func(res *http.Response) error {
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+		if !strings.Contains(string(body), "Host:test.consul.localhost") {
+			return errors.New("Incorrect traefik config")
+		}
+		return nil
+	})
+	c.Assert(err, checker.IsNil)
+
 	client := &http.Client{}
+	req, err := http.NewRequest("GET", "http://127.0.0.1:8000/", nil)
+	c.Assert(err, checker.IsNil)
+	req.Host = "test.consul.localhost"
+	resp, err := client.Do(req)
+
+	c.Assert(err, checker.IsNil)
+	c.Assert(resp.StatusCode, checker.Equals, 200)
+
+	_, err = ioutil.ReadAll(resp.Body)
+	c.Assert(err, checker.IsNil)
+}
+
+func (s *ConsulCatalogSuite) NoTestSingleHealthcheckService(c *check.C) {
+	cmd := exec.Command(traefikBinary, "--consulCatalog", "--consulCatalog.endpoint="+s.consulIP+":8500", "--consulCatalog.domain=consul.localhost", "--configFile=fixtures/consul_catalog/simple.toml")
+	err := cmd.Start()
+	c.Assert(err, checker.IsNil)
+	defer cmd.Process.Kill()
+
+	whoami := s.composeProject.Container(c, "whoami")
+
+	err = s.registerService("test", whoami.NetworkSettings.IPAddress, 80, []string{})
+	c.Assert(err, checker.IsNil, check.Commentf("Error registering service"))
+	defer s.deregisterService("test", whoami.NetworkSettings.IPAddress)
+
+	agent := s.consulClient.Agent()
+	err = agent.CheckRegister(&api.AgentCheckRegistration{
+		ID:        "test",
+		Name:      "test",
+		ServiceID: "test",
+		AgentServiceCheck: api.AgentServiceCheck{
+			HTTP:     "http://" + whoami.NetworkSettings.IPAddress + ":80/health",
+			Interval: "5s",
+			Timeout:  "60s",
+		},
+	})
+	c.Assert(err, checker.IsNil)
+
+	client := &http.Client{}
+	healthReq, err := http.NewRequest("POST", "http://"+whoami.NetworkSettings.IPAddress+"/health", bytes.NewBuffer([]byte("500")))
+	c.Assert(err, checker.IsNil)
+	_, err = client.Do(healthReq)
+	c.Assert(err, checker.IsNil)
+
+	// wait for traefik
+	err = utils.TryRequest("http://127.0.0.1:8081/api/providers", 15*time.Second, func(res *http.Response) error {
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+		if !strings.Contains(string(body), "Host:test.consul.localhost") {
+			return errors.New("Incorrect traefik config")
+		}
+		return nil
+	})
+	c.Assert(err, checker.Not(checker.IsNil))
+
+	healthReq, err = http.NewRequest("POST", "http://"+whoami.NetworkSettings.IPAddress+"/health", bytes.NewBuffer([]byte("200")))
+	c.Assert(err, checker.IsNil)
+	_, err = client.Do(healthReq)
+	c.Assert(err, checker.IsNil)
+
+	// wait for traefik
+	err = utils.TryRequest("http://127.0.0.1:8081/api/providers", 15*time.Second, func(res *http.Response) error {
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+		if !strings.Contains(string(body), "Host:test.consul.localhost") {
+			return errors.New("Incorrect traefik config")
+		}
+		return nil
+	})
+	c.Assert(err, checker.IsNil)
+
+	//client := &http.Client{}
 	req, err := http.NewRequest("GET", "http://127.0.0.1:8000/", nil)
 	c.Assert(err, checker.IsNil)
 	req.Host = "test.consul.localhost"

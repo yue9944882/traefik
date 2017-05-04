@@ -23,21 +23,21 @@ func Test(t *testing.T) {
 }
 
 func init() {
-	check.Suite(&SimpleSuite{})
-	check.Suite(&AccessLogSuite{})
-	check.Suite(&HTTPSSuite{})
-	check.Suite(&FileSuite{})
-	check.Suite(&HealthCheckSuite{})
-	check.Suite(&DockerSuite{})
-	check.Suite(&ConsulSuite{})
+	//	check.Suite(&SimpleSuite{})
+	//	check.Suite(&AccessLogSuite{})
+	//	check.Suite(&HTTPSSuite{})
+	//	check.Suite(&FileSuite{})
+	//	check.Suite(&HealthCheckSuite{})
+	//	check.Suite(&DockerSuite{})
+	//	check.Suite(&ConsulSuite{})
 	check.Suite(&ConsulCatalogSuite{})
-	check.Suite(&EtcdSuite{})
-	check.Suite(&MarathonSuite{})
-	check.Suite(&ConstraintSuite{})
-	check.Suite(&MesosSuite{})
-	check.Suite(&EurekaSuite{})
-	check.Suite(&AcmeSuite{})
-	check.Suite(&DynamoDBSuite{})
+	//	check.Suite(&EtcdSuite{})
+	//	check.Suite(&MarathonSuite{})
+	//	check.Suite(&ConstraintSuite{})
+	//	check.Suite(&MesosSuite{})
+	//	check.Suite(&EurekaSuite{})
+	//	check.Suite(&AcmeSuite{})
+	//	check.Suite(&DynamoDBSuite{})
 }
 
 var traefikBinary = "../dist/traefik"

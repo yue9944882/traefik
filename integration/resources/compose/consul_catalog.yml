@@ -15,3 +15,5 @@ nginx:
   image: nginx
   ports:
     - "8881:80"
+whoami:
+  image: emilevauge/whoami

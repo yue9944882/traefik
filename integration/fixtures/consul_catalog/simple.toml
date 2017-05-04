@@ -7,3 +7,6 @@ logLevel = "DEBUG"
 
 [consulCatalog]
 domain = "consul.localhost"
+
+[web]
+  address = ":8081"
