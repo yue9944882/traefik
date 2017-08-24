@@ -138,21 +138,21 @@ func (r *Rules) pathPrefixStripRegex(paths ...string) []*mux.Route {
 }
 
 func (r *Rules) methods(methods ...string) []*mux.Route {
-	for idx := r.route.routes {
+	for idx := range r.route.routes {
 		r.route.routes[idx].Methods(methods...)
 	}
 	return r.route.routes
 }
 
 func (r *Rules) headers(headers ...string) []*mux.Route {
-	for idx := r.route.routes {
+	for idx := range r.route.routes {
 		r.route.routes[idx].Headers(headers...)
 	}
 	return r.route.routes
 }
 
 func (r *Rules) headersRegexp(headers ...string) []*mux.Route {
-	for idx := r.route.routes {
+	for idx := range r.route.routes {
 		r.route.routes[idx].HeadersRegexp(headers...)
 	}
 	return r.route.routes
