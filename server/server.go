@@ -65,7 +65,7 @@ type serverEntryPoint struct {
 }
 
 type serverRoute struct {
-	route              *mux.Route
+	routes              []*mux.Route
 	stripPrefixes      []string
 	stripPrefixesRegex []string
 	addPrefix          string
@@ -724,7 +724,7 @@ func (server *Server) loadConfig(configurations configs, globalConfiguration Glo
 					continue frontend
 				}
 
-				newServerRoute := &serverRoute{route: serverEntryPoints[entryPointName].httpRouter.GetHandler().NewRoute().Name(frontendName)}
+				newServerRoute := &serverRoute{}
 				for routeName, route := range frontend.Routes {
 					err := getRoute(newServerRoute, &route)
 					if err != nil {
@@ -946,7 +946,9 @@ func (server *Server) loadConfig(configurations configs, globalConfiguration Glo
 					log.Debugf("Reusing backend %s", frontend.Backend)
 				}
 				if frontend.Priority > 0 {
-					newServerRoute.route.Priority(frontend.Priority)
+					for idx, _ := range newServerRoute.routes {
+						newServerRoute.routes[idx].Priority(frontend.Priority)
+					}
 				}
 				server.wireFrontendBackend(newServerRoute, backends[entryPointName+frontend.Backend])
 
@@ -1028,7 +1030,9 @@ func (server *Server) wireFrontendBackend(serverRoute *serverRoute, handler http
 		handler = middlewares.NewStripPrefixRegex(handler, serverRoute.stripPrefixesRegex)
 	}
 
-	serverRoute.route.Handler(handler)
+	for idx, route := serverRoute.routes {
+		serverRoute.routes[idx].Handler(handler)
+	}
 }
 
 func (server *Server) loadEntryPointConfig(entryPointName string, entryPoint *EntryPoint) (negroni.Handler, error) {
@@ -1094,12 +1098,11 @@ func parseHealthCheckOptions(lb healthcheck.LoadBalancer, backend string, hc *ty
 
 func getRoute(serverRoute *serverRoute, route *types.Route) error {
 	rules := Rules{route: serverRoute}
-	newRoute, err := rules.Parse(route.Rule)
+	newRoutes, err := rules.Parse(route.Rule)
 	if err != nil {
 		return err
 	}
-	newRoute.Priority(serverRoute.route.GetPriority() + len(route.Rule))
-	serverRoute.route = newRoute
+	serverRoute.routes = newRoutes
 	return nil
 }
 

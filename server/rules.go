@@ -184,20 +184,21 @@ func (r *Rules) parseRules(expression string, onRule func(functionName string, f
 			return fmt.Errorf("error parsing args from rule: '%s'", rule)
 		}
 
-		for i := range parsedArgs {
-			parsedArgs[i] = strings.TrimSpace(parsedArgs[i])
-		}
-
-		err := onRule(functionName, parsedFunction, parsedArgs)
-		if err != nil {
-			return fmt.Errorf("Parsing error on rule: %v", err)
+		// Split ',' joined args into separated single arg
+		for _, parsedArg := range parsedArgs {
+			args := make([]string, 1)
+			args[0] = strings.TrimSpace(parsedArg)
+			err := onRule(functionName, parsedFunction, args)
+			if err != nil {
+				return fmt.Errorf("Parsing error on rule: %v", err)
+			}
 		}
 	}
 	return nil
 }
 
 // Parse parses rules expressions
-func (r *Rules) Parse(expression string) (*mux.Route, error) {
+func (r *Rules) Parse(expression string) ([]*mux.Route, error) {
 	var resultRoute *mux.Route
 	err := r.parseRules(expression, func(functionName string, function interface{}, arguments []string) error {
 		inputs := make([]reflect.Value, len(arguments))
