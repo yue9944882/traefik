@@ -13,38 +13,41 @@ import (
 
 func TestParseOneRule(t *testing.T) {
 	router := mux.NewRouter()
-	route := router.NewRoute()
-	serverRoute := &serverRoute{route: route}
+	routes := make([]*mux.Route, 1)
+	routes[0] = router.NewRoute()
+	serverRoute := &serverRoute{routes: routes}
 	rules := &Rules{route: serverRoute}
 
 	expression := "Host:foo.bar"
-	routeResult, err := rules.Parse(expression)
+	routeResults, err := rules.Parse(expression)
 	require.NoError(t, err, "Error while building route for %s", expression)
 
 	request := testhelpers.MustNewRequest(http.MethodGet, "http://foo.bar", nil)
-	routeMatch := routeResult.Match(request, &mux.RouteMatch{Route: routeResult})
+
+	routeMatch := routeResults[0].Match(request, &mux.RouteMatch{Route: routeResults})
 
 	assert.True(t, routeMatch, "Rule %s don't match.", expression)
 }
 
 func TestParseTwoRules(t *testing.T) {
 	router := mux.NewRouter()
-	route := router.NewRoute()
-	serverRoute := &serverRoute{route: route}
+	routes := make([]*mux.Route, 1)
+	routes[0] = router.NewRoute()
+	serverRoute := &serverRoute{routes: routes}
 	rules := &Rules{route: serverRoute}
 
 	expression := "Host: Foo.Bar ; Path:/FOObar"
-	routeResult, err := rules.Parse(expression)
+	routeResults, err := rules.Parse(expression)
 
 	require.NoError(t, err, "Error while building route for %s.", expression)
 
 	request := testhelpers.MustNewRequest(http.MethodGet, "http://foo.bar/foobar", nil)
-	routeMatch := routeResult.Match(request, &mux.RouteMatch{Route: routeResult})
+	routeMatch := routeResult[0].Match(request, &mux.RouteMatch{Route: routeResults})
 
 	assert.False(t, routeMatch, "Rule %s don't match.", expression)
 
 	request = testhelpers.MustNewRequest(http.MethodGet, "http://foo.bar/FOObar", nil)
-	routeMatch = routeResult.Match(request, &mux.RouteMatch{Route: routeResult})
+	routeMatch = routeResult[0].Match(request, &mux.RouteMatch{Route: routeResults})
 
 	assert.True(t, routeMatch, "Rule %s don't match.", expression)
 }
@@ -89,8 +92,10 @@ func TestParseDomains(t *testing.T) {
 
 func TestPriorites(t *testing.T) {
 	router := mux.NewRouter()
+	routes := make([]*mux.Route, 1)
+	routes[0] = router.NewRoute()
 	router.StrictSlash(true)
-	rules := &Rules{route: &serverRoute{route: router.NewRoute()}}
+	rules := &Rules{route: &serverRoute{routes: routes}}
 	expression01 := "PathPrefix:/foo"
 
 	routeFoo, err := rules.Parse(expression01)
@@ -105,7 +110,7 @@ func TestPriorites(t *testing.T) {
 	routeMatch = router.Match(&http.Request{URL: &url.URL{Path: "/fo"}}, &mux.RouteMatch{})
 	assert.False(t, routeMatch, "Error matching route")
 
-	multipleRules := &Rules{route: &serverRoute{route: router.NewRoute()}}
+	multipleRules := &Rules{route: &serverRoute{routes: routes}}
 	expression02 := "PathPrefix:/foobar"
 
 	routeFoobar, err := multipleRules.Parse(expression02)
