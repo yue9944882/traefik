@@ -42,12 +42,12 @@ func TestParseTwoRules(t *testing.T) {
 	require.NoError(t, err, "Error while building route for %s.", expression)
 
 	request := testhelpers.MustNewRequest(http.MethodGet, "http://foo.bar/foobar", nil)
-	routeMatch := routeResult[0].Match(request, &mux.RouteMatch{Route: routeResults})
+	routeMatch := routeResults[0].Match(request, &mux.RouteMatch{Route: routeResults})
 
 	assert.False(t, routeMatch, "Rule %s don't match.", expression)
 
 	request = testhelpers.MustNewRequest(http.MethodGet, "http://foo.bar/FOObar", nil)
-	routeMatch = routeResult[0].Match(request, &mux.RouteMatch{Route: routeResults})
+	routeMatch = routeResults[0].Match(request, &mux.RouteMatch{Route: routeResults})
 
 	assert.True(t, routeMatch, "Rule %s don't match.", expression)
 }
