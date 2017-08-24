@@ -180,7 +180,7 @@ func TestServerMultipleFrontendRules(t *testing.T) {
 			routeMatch := false
 			for _, routeResult := range routeResults {
 				if !routeMatch {
-					routeMatch := routeResults.Match(request, &mux.RouteMatch{Route: routeResult})
+					routeMatch := routeResult.Match(request, &mux.RouteMatch{Route: routeResult})
 				}
 			}
 
@@ -195,7 +195,9 @@ func TestServerMultipleFrontendRules(t *testing.T) {
 					t.Fatalf("got URL %s, expected %s", r.URL.String(), test.expectedURL)
 				}
 			}))
-			serverRoute.route.GetHandler().ServeHTTP(nil, request)
+			for _, route := range serverRoute.routes {
+				route.GetHandler().ServeHTTP(nil, request)
+			}
 		})
 	}
 }

@@ -117,7 +117,9 @@ func TestPriorites(t *testing.T) {
 	require.NoError(t, err, "Error while building route for %s", expression01)
 
 	fooHandler := &fakeHandler{name: "fooHandler"}
-	routesFoo.Handler(fooHandler)
+	for idx := range routesFoo {
+		routesFoo[idx].Handler(fooHandler)
+	}
 
 	routeMatch := router.Match(&http.Request{URL: &url.URL{Path: "/foo"}}, &mux.RouteMatch{})
 	assert.True(t, routeMatch, "Error matching route")
@@ -132,6 +134,9 @@ func TestPriorites(t *testing.T) {
 	require.NoError(t, err, "Error while building route for %s", expression02)
 
 	foobarHandler := &fakeHandler{name: "foobarHandler"}
+	for idx := range routesFooBar {
+		routesFooBar[idx].Handler(foobarHandler)
+	}
 	routesFoobar.Handler(foobarHandler)
 	routeMatch = router.Match(&http.Request{URL: &url.URL{Path: "/foo"}}, &mux.RouteMatch{})
 
@@ -148,7 +153,7 @@ func TestPriorites(t *testing.T) {
 		routesFoo[idx].Priority(1)
 	}
 	for idx := range routesFooBar {
-		routesFooBar[idx].Priority(10)
+		routesFoobar[idx].Priority(10)
 	}
 	router.SortRoutes()
 
