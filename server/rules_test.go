@@ -24,7 +24,12 @@ func TestParseOneRule(t *testing.T) {
 
 	request := testhelpers.MustNewRequest(http.MethodGet, "http://foo.bar", nil)
 
-	routeMatch := routeResults[0].Match(request, &mux.RouteMatch{Route: routeResults})
+	routeMatch := false
+	for _, routeResult := range routeResults {
+		if !routeMatch {
+			routeMatch := routeResult.Match(request, &mux.RouteMatch{Route: routeResult})
+		}
+	}
 
 	assert.True(t, routeMatch, "Rule %s don't match.", expression)
 }
@@ -41,13 +46,23 @@ func TestParseTwoRules(t *testing.T) {
 
 	require.NoError(t, err, "Error while building route for %s.", expression)
 
+	routeMatch := false
 	request := testhelpers.MustNewRequest(http.MethodGet, "http://foo.bar/foobar", nil)
-	routeMatch := routeResults[0].Match(request, &mux.RouteMatch{Route: routeResults})
+	for _, routeResult := range routeResults {
+		if !routeMatch {
+			routeMatch := routeResult.Match(request, &mux.RouteMatch{Route: routeResult})
+		}
+	}
 
 	assert.False(t, routeMatch, "Rule %s don't match.", expression)
 
+	routeMatch = false
 	request = testhelpers.MustNewRequest(http.MethodGet, "http://foo.bar/FOObar", nil)
-	routeMatch = routeResults[0].Match(request, &mux.RouteMatch{Route: routeResults})
+	for _, routeResult := range routeResults {
+		if !routeMatch {
+			routeMatch = routeResult.Match(request, &mux.RouteMatch{Route: routeResult})
+		}
+	}
 
 	assert.True(t, routeMatch, "Rule %s don't match.", expression)
 }
@@ -98,11 +113,11 @@ func TestPriorites(t *testing.T) {
 	rules := &Rules{route: &serverRoute{routes: routes}}
 	expression01 := "PathPrefix:/foo"
 
-	routeFoo, err := rules.Parse(expression01)
+	routesFoo, err := rules.Parse(expression01)
 	require.NoError(t, err, "Error while building route for %s", expression01)
 
 	fooHandler := &fakeHandler{name: "fooHandler"}
-	routeFoo.Handler(fooHandler)
+	routesFoo.Handler(fooHandler)
 
 	routeMatch := router.Match(&http.Request{URL: &url.URL{Path: "/foo"}}, &mux.RouteMatch{})
 	assert.True(t, routeMatch, "Error matching route")
@@ -113,11 +128,11 @@ func TestPriorites(t *testing.T) {
 	multipleRules := &Rules{route: &serverRoute{routes: routes}}
 	expression02 := "PathPrefix:/foobar"
 
-	routeFoobar, err := multipleRules.Parse(expression02)
+	routesFoobar, err := multipleRules.Parse(expression02)
 	require.NoError(t, err, "Error while building route for %s", expression02)
 
 	foobarHandler := &fakeHandler{name: "foobarHandler"}
-	routeFoobar.Handler(foobarHandler)
+	routesFoobar.Handler(foobarHandler)
 	routeMatch = router.Match(&http.Request{URL: &url.URL{Path: "/foo"}}, &mux.RouteMatch{})
 
 	assert.True(t, routeMatch, "Error matching route")
@@ -129,8 +144,12 @@ func TestPriorites(t *testing.T) {
 	assert.NotEqual(t, fooMatcher.Handler, foobarHandler, "Error matching priority")
 	assert.Equal(t, fooMatcher.Handler, fooHandler, "Error matching priority")
 
-	routeFoo.Priority(1)
-	routeFoobar.Priority(10)
+	for idx := range routesFoo {
+		routesFoo[idx].Priority(1)
+	}
+	for idx := range routesFooBar {
+		routesFooBar[idx].Priority(10)
+	}
 	router.SortRoutes()
 
 	foobarMatcher := &mux.RouteMatch{}

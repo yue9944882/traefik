@@ -164,21 +164,25 @@ func TestServerMultipleFrontendRules(t *testing.T) {
 		test := test
 		t.Run(test.expression, func(t *testing.T) {
 			t.Parallel()
-
 			router := mux.NewRouter()
 			route := router.NewRoute()
-			serverRoute := &serverRoute{route: route}
+			serverRoute := &serverRoute{}
 			rules := &Rules{route: serverRoute}
 
 			expression := test.expression
-			routeResult, err := rules.Parse(expression)
+			routeResults, err := rules.Parse(expression)
 
 			if err != nil {
 				t.Fatalf("Error while building route for %s: %+v", expression, err)
 			}
 
 			request := testhelpers.MustNewRequest(http.MethodGet, test.requestURL, nil)
-			routeMatch := routeResult.Match(request, &mux.RouteMatch{Route: routeResult})
+			routeMatch := false
+			for _, routeResult := range routeResults {
+				if !routeMatch {
+					routeMatch := routeResults.Match(request, &mux.RouteMatch{Route: routeResult})
+				}
+			}
 
 			if !routeMatch {
 				t.Fatalf("Rule %s doesn't match", expression)
