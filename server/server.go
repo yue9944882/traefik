@@ -1032,7 +1032,7 @@ func (server *Server) wireFrontendBackend(serverRoute *serverRoute, handler http
 		handler = middlewares.NewStripPrefixRegex(handler, serverRoute.stripPrefixesRegex)
 	}
 
-	for idx, route := range serverRoute.routes {
+	for idx := range serverRoute.routes {
 		serverRoute.routes[idx].Handler(handler)
 	}
 }
