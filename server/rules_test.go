@@ -27,7 +27,7 @@ func TestParseOneRule(t *testing.T) {
 	routeMatch := false
 	for _, routeResult := range routeResults {
 		if !routeMatch {
-			routeMatch := routeResult.Match(request, &mux.RouteMatch{Route: routeResult})
+			routeMatch = routeResult.Match(request, &mux.RouteMatch{Route: routeResult})
 		}
 	}
 
@@ -50,7 +50,7 @@ func TestParseTwoRules(t *testing.T) {
 	request := testhelpers.MustNewRequest(http.MethodGet, "http://foo.bar/foobar", nil)
 	for _, routeResult := range routeResults {
 		if !routeMatch {
-			routeMatch := routeResult.Match(request, &mux.RouteMatch{Route: routeResult})
+			routeMatch = routeResult.Match(request, &mux.RouteMatch{Route: routeResult})
 		}
 	}
 

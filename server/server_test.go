@@ -165,7 +165,6 @@ func TestServerMultipleFrontendRules(t *testing.T) {
 		t.Run(test.expression, func(t *testing.T) {
 			t.Parallel()
 			router := mux.NewRouter()
-			route := router.NewRoute()
 			serverRoute := &serverRoute{}
 			rules := &Rules{route: serverRoute}
 
@@ -180,7 +179,7 @@ func TestServerMultipleFrontendRules(t *testing.T) {
 			routeMatch := false
 			for _, routeResult := range routeResults {
 				if !routeMatch {
-					routeMatch := routeResult.Match(request, &mux.RouteMatch{Route: routeResult})
+					routeMatch = routeResult.Match(request, &mux.RouteMatch{Route: routeResult})
 				}
 			}
 
