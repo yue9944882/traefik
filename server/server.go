@@ -952,9 +952,11 @@ func (server *Server) loadConfig(configurations configs, globalConfiguration Glo
 				}
 				server.wireFrontendBackend(newServerRoute, backends[entryPointName+frontend.Backend])
 
-				err := newServerRoute.route.GetError()
-				if err != nil {
-					log.Errorf("Error building route: %s", err)
+				for _, route := range newServerRoute.routes {
+					err := route.GetError()
+					if err != nil {
+						log.Errorf("Error building route: %s", err)
+					}
 				}
 			}
 		}

@@ -127,7 +127,6 @@ func (r *Rules) pathPrefixStrip(paths ...string) []*mux.Route {
 func (r *Rules) pathPrefixStripRegex(paths ...string) []*mux.Route {
 	sort.Sort(bySize(paths))
 	r.route.stripPrefixesRegex = paths
-	router := r.route.route.Subrouter()
 	for idx := range r.route.routes {
 		router := r.route.routes[idx].Subrouter()
 		for _, path := range paths {
@@ -226,7 +225,7 @@ func (r *Rules) parseRules(expression string, onRule func(functionName string, f
 
 // Parse parses rules expressions
 func (r *Rules) Parse(expression string) ([]*mux.Route, error) {
-	var resultRoute []*mux.Route
+	var resultRoutes []*mux.Route
 	err := r.parseRules(expression, func(functionName string, function interface{}, arguments []string) error {
 		inputs := make([]reflect.Value, len(arguments))
 		for i := range arguments {
@@ -251,7 +250,7 @@ func (r *Rules) Parse(expression string) ([]*mux.Route, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error parsing rule: %v", err)
 	}
-	return resultRoute, nil
+	return resultRoutes, nil
 }
 
 // ParseDomains parses rules expressions and returns domains
