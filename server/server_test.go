@@ -164,7 +164,6 @@ func TestServerMultipleFrontendRules(t *testing.T) {
 		test := test
 		t.Run(test.expression, func(t *testing.T) {
 			t.Parallel()
-			router := mux.NewRouter()
 			serverRoute := &serverRoute{}
 			rules := &Rules{route: serverRoute}
 
