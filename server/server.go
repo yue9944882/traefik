@@ -65,7 +65,7 @@ type serverEntryPoint struct {
 }
 
 type serverRoute struct {
-	routes              []*mux.Route
+	routes             []*mux.Route
 	stripPrefixes      []string
 	stripPrefixesRegex []string
 	addPrefix          string
@@ -1030,7 +1030,7 @@ func (server *Server) wireFrontendBackend(serverRoute *serverRoute, handler http
 		handler = middlewares.NewStripPrefixRegex(handler, serverRoute.stripPrefixesRegex)
 	}
 
-	for idx, route := serverRoute.routes {
+	for idx, route := range serverRoute.routes {
 		serverRoute.routes[idx].Handler(handler)
 	}
 }
