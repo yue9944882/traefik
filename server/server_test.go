@@ -622,6 +622,79 @@ func TestServerEntrypointWhitelistConfig(t *testing.T) {
 	}
 }
 
+func TestPathPriorities(t *testing.T) {
+	router := mux.NewRouter()
+	router.StrictSlash(true)
+	route := router.NewRoute()
+
+	rules01 := &Rules{route: &serverRoute{route: route}}
+	expression01 := "PathPrefix:/foo,/bar,/foobarbaz"
+	route01, err := rules01.Parse(expression01)
+	require.NoError(t, err, "Error while building route for %s", expression01)
+	handler01 := &fakeHandler{name: "handler01"}
+	route01.Handler(handler01)
+
+	rules02 := &Rules{route: &serverRoute{route: route}}
+	expression02 := "PathPrefix:/foobar"
+	route02, err := rules02.Parse(expression02)
+	require.NoError(t, err, "Error while building route for %s", expression02)
+	handler02 := &fakeHandler{name: "handler02"}
+	route02.Handler(handler02)
+
+	router.SortRoutes()
+	// spew.Dump(router)
+
+	tests := []struct {
+		path    string
+		handler *fakeHandler
+	}{
+		{
+			path:    "/no-match",
+			handler: nil,
+		},
+		{
+			path:    "/foo/1",
+			handler: handler01,
+		},
+		{
+			path:    "/bar",
+			handler: handler01,
+		},
+		{
+			path:    "/bar/foobar",
+			handler: handler01,
+		},
+		{
+			path:    "/foobar",
+			handler: handler02,
+		},
+		{
+			path:    "/foob",
+			handler: handler01,
+		},
+		{
+			path:    "/foobarbaz/1",
+			handler: handler01,
+		},
+		{
+			path:    "/foobar/baz",
+			handler: handler02,
+		},
+	}
+
+	for _, test := range tests {
+		matcher := &mux.RouteMatch{}
+		routeMatch := router.Match(&http.Request{URL: &url.URL{Path: test.path}}, matcher)
+
+		if test.handler == nil {
+			assert.False(t, routeMatch, "Error matching route %s", test.path)
+		} else {
+			assert.True(t, routeMatch, "Error matching route %s", test.path)
+			assert.Equal(t, test.handler, matcher.Handler, "Error matching handler for %s", test.path)
+		}
+	}
+}
+
 func TestServerResponseEmptyBackend(t *testing.T) {
 	const requestPath = "/path"
 	const routeRule = "Path:" + requestPath
