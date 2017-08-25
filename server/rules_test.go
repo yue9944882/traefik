@@ -127,6 +127,7 @@ func TestPriorites(t *testing.T) {
 	routeMatch = router.Match(&http.Request{URL: &url.URL{Path: "/fo"}}, &mux.RouteMatch{})
 	assert.False(t, routeMatch, "Error matching route")
 
+	routes[0] = router.NewRoute()
 	multipleRules := &Rules{route: &serverRoute{routes: routes}}
 	expression02 := "PathPrefix:/foobar"
 
