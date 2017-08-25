@@ -135,9 +135,6 @@ func TestPriorites(t *testing.T) {
 	assert.Equal(t, foobarMatcher.Handler, foobarHandler, "Error matching priority")
 	assert.NotEqual(t, foobarMatcher.Handler, fooHandler, "Error matching priority")
 
-	splitedRules := &Rules{route: &serverRoute{route: router.NewRoute()}}
-	expression02 := "PathPrefix:/foobar"
-
 }
 
 type fakeHandler struct {
