@@ -33,6 +33,7 @@ func (r *Rules) host(hosts ...string) *mux.Route {
 			return types.CanonicalDomain(reqHost) == types.CanonicalDomain(host)
 		})
 	}
+	return r.route.route
 }
 
 func (r *Rules) hostRegexp(hosts ...string) *mux.Route {
