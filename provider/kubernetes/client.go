@@ -152,7 +152,6 @@ func (c *clientImpl) WatchAll(namespaces Namespaces, labelSelector string, stopC
 
 	var informManager informerManager
 	for _, ns := range namespaces {
-		ns := ns
 		informManager.extend(c.WatchIngresses(ns, kubeLabelSelector, eventCh), true)
 		informManager.extend(c.WatchObjects(ns, kindServices, &corev1.Service{}, c.svcStores, eventCh), true)
 		informManager.extend(c.WatchObjects(ns, kindEndpoints, &corev1.Endpoints{}, c.epStores, eventCh), true)
