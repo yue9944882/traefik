@@ -27,6 +27,8 @@ import (
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
 )
 
 var _ provider.Provider = (*Provider)(nil)
@@ -126,6 +128,26 @@ func (p *Provider) Provide(configurationChan chan<- types.ConfigMessage, pool *s
 			stopWatch := make(chan struct{}, 1)
 			defer close(stopWatch)
 			eventsChan, err := k8sClient.WatchAll(p.Namespaces, stopWatch)
+			rateLimittingQueue := workqueue.NewRateLimitingQueue(workqueue.DefaultItemBasedRateLimiter())
+
+			// Worker routine plumbing event into rate limitting queue
+			go func() {
+				for {
+					select {
+					case <-stop:
+						rateLimittingQueue.ShutDown()
+						return
+					case event := <-eventsChan:
+						key, err := keyFuncTypeNamespaceName(event)
+						if err != nil {
+							log.Warnf("Fail to parse key func from object: %v", event)
+							continue
+						}
+						rateLimittingQueue.AddRateLimited(key)
+					}
+				}
+			}()
+
 			if err != nil {
 				log.Errorf("Error watching kubernetes events: %v", err)
 				timer := time.NewTimer(1 * time.Second)
@@ -140,21 +162,32 @@ func (p *Provider) Provide(configurationChan chan<- types.ConfigMessage, pool *s
 				select {
 				case <-stop:
 					return nil
-				case event := <-eventsChan:
-					log.Debugf("Received Kubernetes event kind %T", event)
-					templateObjects, err := p.loadIngresses(k8sClient)
-					if err != nil {
-						return err
+				case eventkey, quit := rateLimittingQueue.Get():
+					if quit {
+						return nil
 					}
-					if reflect.DeepEqual(p.lastConfiguration.Get(), templateObjects) {
-						log.Debugf("Skipping Kubernetes event kind %T", event)
-					} else {
-						p.lastConfiguration.Set(templateObjects)
-						configurationChan <- types.ConfigMessage{
-							ProviderName:  "kubernetes",
-							Configuration: p.loadConfig(*templateObjects),
+					log.Debugf("Received Kubernetes event from %T", eventkey)
+					// We put the following parts into a anonymous function so that we can defer
+					// to mark incoming items in the queue as done.
+					func() {
+						defer rateLimittingQueue.Done(eventkey)
+						templateObjects, err := p.loadIngresses(k8sClient)
+						if err != nil {
+							rateLimittingQueue.AddRateLimited(eventkey)
+							log.Errorf("Fail to load ingresses from kubernetes cluster: %v", err)
+							return
 						}
-					}
+						if reflect.DeepEqual(p.lastConfiguration.Get(), templateObjects) {
+							log.Debugf("Skipping Kubernetes event form %T", eventkey)
+						} else {
+							p.lastConfiguration.Set(templateObjects)
+							configurationChan <- types.ConfigMessage{
+								ProviderName:  "kubernetes",
+								Configuration: p.loadConfig(*templateObjects),
+							}
+						}
+						rateLimittingQueue.Forget(eventkey)
+					}()
 				}
 			}
 		}
@@ -1128,4 +1161,13 @@ func getPassTLSClientCert(i *extensionsv1beta1.Ingress) *types.TLSClientHeaders 
 func templateSafeString(value string) error {
 	_, err := strconv.Unquote(`"` + value + `"`)
 	return err
+}
+
+// keyFuncTypeNamespaceName creates a string index for kubernetes object in a form of: <type>:[<namespace>:]<name>
+var keyFuncTypeNamespaceName cache.KeyFunc = func(obj interface{}) (string, error) {
+	namespaceNameKey, err := cache.MetaNamespaceKeyFunc(obj)
+	if err != nil {
+		return "", err
+	}
+	return reflect.TypeOf(obj).String() + ":" + namespaceNameKey, nil
 }
